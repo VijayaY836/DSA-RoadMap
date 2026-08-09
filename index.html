@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The 45-Day Climb</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#FBF9F4;
+  --bg-panel:#FFFFFF;
+  --bg-panel-2:#F3F0E7;
+  --line:#E6E1D3;
+  --ink:#201D18;
+  --ink-dim:#726C5E;
+  --ink-faint:#AFA894;
+  --accent:#FF5A36;
+
+  --arrays:#FF5A4E;
+  --sliding:#FFB020;
+  --stack:#E0893D;
+  --binary:#2E8FE0;
+  --trees:#1FB574;
+  --trie:#A855F7;
+  --graphs:#12B8A8;
+  --dp:#6366F1;
+  --revision:#8B93A3;
+  --mock:#EC4899;
+
+  --disp: 'Space Grotesk', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--mono);}
+body{
+  background-image:
+    radial-gradient(circle at 15% 8%, rgba(255,90,54,0.07), transparent 40%),
+    radial-gradient(circle at 85% 92%, rgba(31,181,116,0.07), transparent 45%),
+    repeating-radial-gradient(circle at 50% 0%, transparent 0, transparent 140px, rgba(32,29,24,0.02) 141px);
+  background-attachment:fixed;
+}
+
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px;}
+
+/* ---------- HEADER ---------- */
+.head{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  gap:24px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);
+  padding-bottom:20px;margin-bottom:20px;
+}
+.head-left h1{
+  font-family:var(--disp);font-weight:700;font-size:30px;letter-spacing:-0.01em;
+  margin:0 0 4px;
+}
+.head-left .sub{color:var(--ink-dim);font-size:12.5px;letter-spacing:.02em;}
+.head-left .sub b{color:var(--ink);font-weight:600;}
+
+.stats{display:flex;gap:22px;}
+.stat{text-align:right;}
+.stat .n{font-family:var(--disp);font-size:22px;font-weight:700;line-height:1;}
+#stat-streak{color:var(--accent);}
+.stat .l{font-size:10px;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase;margin-top:4px;}
+
+.progress-rail{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:26px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--arrays),var(--sliding),var(--trees),var(--binary),var(--trie),var(--graphs),var(--dp));width:0%;transition:width .4s ease;}
+
+/* ---------- TOGGLE ---------- */
+.toggle{display:flex;gap:6px;margin-bottom:24px;}
+.toggle button{
+  font-family:var(--mono);font-size:12px;letter-spacing:.03em;
+  background:var(--bg-panel);border:1px solid var(--line);color:var(--ink-dim);
+  padding:9px 16px;border-radius:7px;cursor:pointer;transition:.15s;
+}
+.toggle button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.toggle button:not(.active):hover{color:var(--ink);border-color:var(--ink-faint);}
+
+/* ---------- LEGEND ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:26px;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink-dim);}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+
+/* ---------- MAP VIEW ---------- */
+#map-view{overflow-x:auto;padding-bottom:10px;}
+.map-inner{position:relative;width:900px;margin:0 auto;}
+svg.trail{position:absolute;top:0;left:0;overflow:visible;}
+.node{
+  position:absolute;width:64px;height:64px;margin-left:-32px;margin-top:-32px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.node-ring{
+  width:100%;height:100%;border-radius:50%;
+  border:2px solid var(--line);background:var(--bg-panel);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;transition:transform .15s ease, box-shadow .15s ease;
+}
+.node:hover .node-ring{transform:scale(1.08);}
+.node-ring .day-n{font-family:var(--disp);font-weight:700;font-size:15px;color:var(--ink-dim);}
+.node.done .node-ring{background:var(--phase-color);border-color:var(--phase-color);box-shadow:0 0 0 4px color-mix(in srgb, var(--phase-color) 22%, transparent);}
+.node.done .node-ring .day-n{color:#fff;}
+.node.partial .node-ring{border-color:var(--phase-color);}
+.node.partial .node-ring::after{
+  content:'';position:absolute;inset:-2px;border-radius:50%;
+  background:conic-gradient(var(--phase-color) calc(var(--pct)*1%), transparent 0);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+}
+.node-label{
+  position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  margin-top:6px;font-size:9px;color:var(--ink-faint);white-space:nowrap;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.node.mock .node-ring{border-radius:8px;}
+.node.mock .node-ring{border-color:var(--mock);}
+.node.mock .day-n{color:var(--mock);}
+.node.mock.done .node-ring{background:var(--mock);}
+.node.mock.done .day-n{color:#fff;}
+.node.revision .node-ring{border-style:dashed;}
+
+.phase-tag{
+  position:absolute;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--phase-color);font-weight:600;
+}
+
+/* ---------- DETAIL PANEL ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(5,7,10,.72);backdrop-filter:blur(2px);
+  display:none;align-items:center;justify-content:center;z-index:50;padding:20px;
+}
+.overlay.show{display:flex;}
+.detail{
+  background:var(--bg-panel);border:1px solid var(--line);border-radius:14px;
+  width:100%;max-width:440px;max-height:82vh;overflow-y:auto;
+  padding:22px 22px 18px;
+}
+.detail-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+.detail-day{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--phase-color);font-weight:600;}
+.detail-title{font-family:var(--disp);font-size:20px;font-weight:700;margin:2px 0 14px;}
+.detail-close{background:none;border:none;color:var(--ink-faint);font-size:20px;cursor:pointer;line-height:1;padding:0;}
+.detail-close:hover{color:var(--ink);}
+.task-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+.task-row:last-of-type{border-bottom:none;}
+.task-row input{margin-top:2px;width:15px;height:15px;accent-color:var(--phase-color);cursor:pointer;flex-shrink:0;}
+.task-row label{cursor:pointer;flex:1;}
+.task-row.checked label{color:var(--ink-faint);text-decoration:line-through;}
+.task-link{
+  flex-shrink:0;color:var(--ink-faint);text-decoration:none;font-size:13px;
+  border:1px solid var(--line);border-radius:5px;width:20px;height:20px;
+  display:flex;align-items:center;justify-content:center;transition:.15s;
+}
+.task-link:hover{color:var(--phase-color);border-color:var(--phase-color);}
+.detail-note{margin-top:12px;font-size:11.5px;color:var(--ink-faint);font-style:italic;}
+
+/* ---------- LIST VIEW ---------- */
+#list-view{display:none;}
+.phase-block{margin-bottom:6px;}
+.phase-head{
+  display:flex;align-items:center;gap:10px;padding:14px 4px 8px;
+  font-family:var(--disp);font-weight:600;font-size:14px;
+}
+.phase-head .swatch{width:10px;height:10px;border-radius:3px;background:var(--phase-color);}
+.phase-head .count{margin-left:auto;color:var(--ink-faint);font-size:11px;font-weight:400;}
+.day-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px;}
+.day-card{
+  background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;
+  padding:14px;border-top:3px solid var(--phase-color);
+}
+.day-card .dc-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+.day-card .dc-day{font-size:10px;color:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase;}
+.day-card .dc-title{font-family:var(--disp);font-weight:600;font-size:13.5px;margin-top:1px;}
+.day-card .task-row{font-size:12.5px;padding:6px 0;}
+.day-card .detail-note{margin-top:8px;font-size:10.5px;}
+
+@media (max-width:640px){
+  .head{flex-direction:column;align-items:flex-start;}
+  .stats{gap:16px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="head-left">
+      <h1>The 45-Day Climb</h1>
+      <div class="sub">145 problems &middot; NeetCode 150 + Blind 75 &middot; <b>Day 1</b> = the day you start &mdash; tap a checkpoint to log it</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n" id="stat-solved">0/145</div><div class="l">Solved</div></div>
+      <div class="stat"><div class="n" id="stat-days">0/45</div><div class="l">Days cleared</div></div>
+      <div class="stat"><div class="n" id="stat-streak">0</div><div class="l">Streak</div></div>
+    </div>
+  </div>
+
+  <div class="progress-rail"><div class="progress-fill" id="progress-fill"></div></div>
+
+  <div class="toggle">
+    <button id="btn-map" class="active">Map</button>
+    <button id="btn-list">Calendar</button>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div id="map-view">
+    <div class="map-inner" id="map-inner"></div>
+  </div>
+
+  <div id="list-view"></div>
+
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="detail" id="detail"></div>
+</div>
+
+<script>
+const PHASES = {
+  arrays:    {name:'Arrays / Two Pointers / Strings', color:'var(--arrays)'},
+  sliding:   {name:'Sliding Window / Intervals',      color:'var(--sliding)'},
+  stack:     {name:'Stack',                            color:'var(--stack)'},
+  binary:    {name:'Binary Search / Linked List / Bit',color:'var(--binary)'},
+  trees:     {name:'Trees',                            color:'var(--trees)'},
+  trie:      {name:'Trie / Backtracking',              color:'var(--trie)'},
+  graphs:    {name:'Graphs / Heaps',                   color:'var(--graphs)'},
+  dp:        {name:'Dynamic Programming',              color:'var(--dp)'},
+  revision:  {name:'Revision Day',                     color:'var(--revision)'},
+  mock:      {name:'Mock Test',                        color:'var(--mock)'},
+};
+
+// tasks: {n: display name, s: leetcode slug or null if not a direct-link item}
+const DAYS = [
+ {d:1,phase:'arrays',title:'Arrays',tasks:[
+   {n:'Two Sum',s:'two-sum'},{n:'Contains Duplicate',s:'contains-duplicate'},{n:'Best Time to Buy & Sell Stock',s:'best-time-to-buy-and-sell-stock'}]},
+ {d:2,phase:'arrays',title:'Arrays + Hashing',tasks:[
+   {n:'Valid Anagram',s:'valid-anagram'},{n:'Group Anagrams',s:'group-anagrams'},{n:'Top K Frequent Elements',s:'top-k-frequent-elements'}]},
+ {d:3,phase:'arrays',title:'Arrays Deep',tasks:[
+   {n:'Product of Array Except Self',s:'product-of-array-except-self'},{n:'Encode & Decode Strings',s:'encode-and-decode-strings'},{n:'Longest Consecutive Sequence',s:'longest-consecutive-sequence'}]},
+ {d:4,phase:'arrays',title:'Two Pointers',tasks:[
+   {n:'Valid Palindrome',s:'valid-palindrome'},{n:'Two Sum II',s:'two-sum-ii-input-array-is-sorted'},{n:'3Sum',s:'3sum'}]},
+ {d:5,phase:'arrays',title:'Two Pointers',tasks:[
+   {n:'Container With Most Water',s:'container-with-most-water'},{n:'Trapping Rain Water',s:'trapping-rain-water'}]},
+ {d:6,phase:'revision',title:'Revision',tasks:[
+   {n:'Re-solve: Two Sum',s:'two-sum'},{n:'Re-solve: 3Sum',s:'3sum'},{n:'Re-solve: Trapping Rain Water',s:'trapping-rain-water'},{n:'Watch: NeetCode Two Pointers',s:null}]},
+ {d:7,phase:'sliding',title:'Sliding Window',tasks:[
+   {n:'Best Time to Buy & Sell Stock',s:'best-time-to-buy-and-sell-stock'},{n:'Longest Substring w/o Repeat',s:'longest-substring-without-repeating-characters'},{n:'Longest Repeating Char Replacement',s:'longest-repeating-character-replacement'}]},
+ {d:8,phase:'sliding',title:'Sliding Window',tasks:[
+   {n:'Permutation in String',s:'permutation-in-string'},{n:'Minimum Window Substring',s:'minimum-window-substring'},{n:'Sliding Window Maximum',s:'sliding-window-maximum'}]},
+ {d:9,phase:'sliding',title:'Prefix + Intervals',tasks:[
+   {n:'Range Sum Query',s:'range-sum-query-immutable'},{n:'Insert Interval',s:'insert-interval'},{n:'Merge Intervals',s:'merge-intervals'}]},
+ {d:10,phase:'sliding',title:'Intervals',tasks:[
+   {n:'Non-overlapping Intervals',s:'non-overlapping-intervals'},{n:'Meeting Rooms II',s:'meeting-rooms-ii'},{n:'Min Interval to Include Each Query',s:'minimum-interval-to-include-each-query'}]},
+ {d:11,phase:'stack',title:'Stack',tasks:[
+   {n:'Valid Parentheses',s:'valid-parentheses'},{n:'Min Stack',s:'min-stack'},{n:'Evaluate Reverse Polish Notation',s:'evaluate-reverse-polish-notation'}]},
+ {d:12,phase:'stack',title:'Stack',tasks:[
+   {n:'Generate Parentheses',s:'generate-parentheses'},{n:'Daily Temperatures',s:'daily-temperatures'},{n:'Car Fleet',s:'car-fleet'},{n:'Largest Rectangle in Histogram',s:'largest-rectangle-in-histogram'}]},
+ {d:13,phase:'revision',title:'Revision',tasks:[
+   {n:'Re-solve 2 hardest Sliding Window',s:null},{n:'Re-solve 2 hardest Stack',s:null}],note:'No hints allowed'},
+ {d:14,phase:'binary',title:'Binary Search',tasks:[
+   {n:'Binary Search',s:'binary-search'},{n:'Search a 2D Matrix',s:'search-a-2d-matrix'},{n:'Koko Eating Bananas',s:'koko-eating-bananas'}]},
+ {d:15,phase:'binary',title:'Binary Search',tasks:[
+   {n:'Find Minimum in Rotated Sorted Array',s:'find-minimum-in-rotated-sorted-array'},{n:'Search in Rotated Sorted Array',s:'search-in-rotated-sorted-array'},{n:'Time Based Key-Value Store',s:'time-based-key-value-store'},{n:'Median of Two Sorted Arrays',s:'median-of-two-sorted-arrays'}]},
+ {d:16,phase:'binary',title:'Linked List',tasks:[
+   {n:'Reverse Linked List',s:'reverse-linked-list'},{n:'Merge Two Sorted Lists',s:'merge-two-sorted-lists'},{n:'Reorder List',s:'reorder-list'}]},
+ {d:17,phase:'binary',title:'Linked List',tasks:[
+   {n:'Remove Nth Node From End',s:'remove-nth-node-from-end-of-list'},{n:'Copy List with Random Pointer',s:'copy-list-with-random-pointer'},{n:'Add Two Numbers',s:'add-two-numbers'}]},
+ {d:18,phase:'binary',title:'Linked List Adv.',tasks:[
+   {n:'Linked List Cycle',s:'linked-list-cycle'},{n:'Find the Duplicate Number',s:'find-the-duplicate-number'},{n:'LRU Cache',s:'lru-cache'}]},
+ {d:19,phase:'binary',title:'Linked List Adv.',tasks:[
+   {n:'Merge K Sorted Lists',s:'merge-k-sorted-lists'},{n:'Reverse Nodes in K-Group',s:'reverse-nodes-in-k-group'}]},
+ {d:20,phase:'revision',title:'Revision',tasks:[
+   {n:'Timed: Binary Search under 5 min',s:'binary-search'},{n:'Timed: LRU Cache from scratch',s:'lru-cache'}],note:'Grade yourself on time'},
+ {d:21,phase:'arrays',title:'Strings',tasks:[
+   {n:'Longest Palindromic Substring',s:'longest-palindromic-substring'},{n:'Palindromic Substrings',s:'palindromic-substrings'},{n:'Find All Anagrams in a String',s:'find-all-anagrams-in-a-string'}]},
+ {d:22,phase:'binary',title:'Bit Manipulation',tasks:[
+   {n:'Number of 1 Bits',s:'number-of-1-bits'},{n:'Counting Bits',s:'counting-bits'},{n:'Reverse Bits',s:'reverse-bits'},{n:'Missing Number',s:'missing-number'},{n:'Sum of Two Integers',s:'sum-of-two-integers'},{n:'Reverse Integer',s:'reverse-integer'}]},
+ {d:23,phase:'trees',title:'Trees',tasks:[
+   {n:'Invert Binary Tree',s:'invert-binary-tree'},{n:'Maximum Depth of Binary Tree',s:'maximum-depth-of-binary-tree'},{n:'Diameter of Binary Tree',s:'diameter-of-binary-tree'},{n:'Balanced Binary Tree',s:'balanced-binary-tree'}]},
+ {d:24,phase:'trees',title:'Trees',tasks:[
+   {n:'Same Tree',s:'same-tree'},{n:'Subtree of Another Tree',s:'subtree-of-another-tree'},{n:'Lowest Common Ancestor of Binary Tree',s:'lowest-common-ancestor-of-a-binary-tree'}]},
+ {d:25,phase:'trees',title:'Trees BFS',tasks:[
+   {n:'Binary Tree Level Order Traversal',s:'binary-tree-level-order-traversal'},{n:'Binary Tree Right Side View',s:'binary-tree-right-side-view'},{n:'Count Good Nodes in Binary Tree',s:'count-good-nodes-in-binary-tree'}]},
+ {d:26,phase:'trees',title:'BST',tasks:[
+   {n:'Validate BST',s:'validate-binary-search-tree'},{n:'Kth Smallest Element in BST',s:'kth-smallest-element-in-a-bst'},{n:'Construct Tree from Preorder & Inorder',s:'construct-binary-tree-from-preorder-and-inorder-traversal'}]},
+ {d:27,phase:'trees',title:'Advanced Trees',tasks:[
+   {n:'Binary Tree Maximum Path Sum',s:'binary-tree-maximum-path-sum'},{n:'Serialize & Deserialize Binary Tree',s:'serialize-and-deserialize-binary-tree'},{n:'Word Search II (Trie)',s:'word-search-ii'}]},
+ {d:28,phase:'trie',title:'Trie',tasks:[
+   {n:'Implement Trie (Prefix Tree)',s:'implement-trie-prefix-tree'},{n:'Design Add and Search Words',s:'design-add-and-search-words-data-structure'}]},
+ {d:29,phase:'revision',title:'Revision',tasks:[
+   {n:'Whiteboard: BT Level Order',s:'binary-tree-level-order-traversal'},{n:'Whiteboard: LCA Binary Tree',s:'lowest-common-ancestor-of-a-binary-tree'}],note:'No IDE — whiteboard only'},
+ {d:30,phase:'graphs',title:'Heaps',tasks:[
+   {n:'Kth Largest Element in a Stream',s:'kth-largest-element-in-a-stream'},{n:'Last Stone Weight',s:'last-stone-weight'},{n:'K Closest Points to Origin',s:'k-closest-points-to-origin'},{n:'Kth Largest Element in Array',s:'kth-largest-element-in-an-array'},{n:'Task Scheduler',s:'task-scheduler'},{n:'Find Median from Data Stream',s:'find-median-from-data-stream'}]},
+ {d:31,phase:'graphs',title:'Graphs BFS / DFS',tasks:[
+   {n:'Number of Islands',s:'number-of-islands'},{n:'Clone Graph',s:'clone-graph'},{n:'Max Area of Island',s:'max-area-of-island'}]},
+ {d:32,phase:'graphs',title:'Graphs',tasks:[
+   {n:'Pacific Atlantic Water Flow',s:'pacific-atlantic-water-flow'},{n:'Surrounded Regions',s:'surrounded-regions'},{n:'Rotting Oranges',s:'rotting-oranges'}]},
+ {d:33,phase:'graphs',title:'Graphs Adv.',tasks:[
+   {n:'Walls and Gates',s:'walls-and-gates'},{n:'Course Schedule',s:'course-schedule'},{n:'Course Schedule II',s:'course-schedule-ii'}]},
+ {d:34,phase:'graphs',title:'Union Find + Dijkstra',tasks:[
+   {n:'Redundant Connection',s:'redundant-connection'},{n:'Number of Connected Components',s:'number-of-connected-components-in-an-undirected-graph'},{n:'Network Delay Time',s:'network-delay-time'},{n:'Cheapest Flights Within K Stops',s:'cheapest-flights-within-k-stops'}]},
+ {d:35,phase:'revision',title:'Revision',tasks:[
+   {n:'Master: Number of Islands (BFS + DFS)',s:'number-of-islands'},{n:'Master: Course Schedule (topological sort)',s:'course-schedule'}],note:'Know these cold'},
+ {d:36,phase:'trie',title:'Backtracking',tasks:[
+   {n:'Subsets',s:'subsets'},{n:'Combination Sum',s:'combination-sum'},{n:'Permutations',s:'permutations'}]},
+ {d:37,phase:'trie',title:'Backtracking',tasks:[
+   {n:'Subsets II',s:'subsets-ii'},{n:'Combination Sum II',s:'combination-sum-ii'},{n:'Word Search',s:'word-search'}]},
+ {d:38,phase:'trie',title:'Backtracking Adv.',tasks:[
+   {n:'Palindrome Partitioning',s:'palindrome-partitioning'},{n:'Letter Combinations of a Phone Number',s:'letter-combinations-of-a-phone-number'},{n:'N-Queens',s:'n-queens'}]},
+ {d:39,phase:'dp',title:'DP 1D',tasks:[
+   {n:'Climbing Stairs',s:'climbing-stairs'},{n:'Min Cost Climbing Stairs',s:'min-cost-climbing-stairs'},{n:'House Robber',s:'house-robber'},{n:'House Robber II',s:'house-robber-ii'}]},
+ {d:40,phase:'dp',title:'DP 1D',tasks:[
+   {n:'Longest Palindromic Substring',s:'longest-palindromic-substring'},{n:'Palindromic Substrings',s:'palindromic-substrings'},{n:'Decode Ways',s:'decode-ways'},{n:'Coin Change',s:'coin-change'}]},
+ {d:41,phase:'dp',title:'DP 1D',tasks:[
+   {n:'Maximum Product Subarray',s:'maximum-product-subarray'},{n:'Word Break',s:'word-break'},{n:'Longest Increasing Subsequence',s:'longest-increasing-subsequence'}]},
+ {d:42,phase:'revision',title:'Revision',tasks:[
+   {n:'DP Linear: House Robber — write recurrence',s:'house-robber'},{n:'DP Knapsack: Coin Change — write recurrence',s:'coin-change'}],note:'3 patterns: Linear, Interval, Knapsack'},
+ {d:43,phase:'dp',title:'DP 2D',tasks:[
+   {n:'Unique Paths',s:'unique-paths'},{n:'Longest Common Subsequence',s:'longest-common-subsequence'},{n:'Best Time to Buy/Sell with Cooldown',s:'best-time-to-buy-and-sell-stock-with-cooldown'}]},
+ {d:44,phase:'dp',title:'DP 2D',tasks:[
+   {n:'Coin Change II',s:'coin-change-ii'},{n:'Target Sum',s:'target-sum'},{n:'Interleaving String',s:'interleaving-string'},{n:'Edit Distance',s:'edit-distance'},{n:'Burst Balloons',s:'burst-balloons'},{n:'Regular Expression Matching',s:'regular-expression-matching'}]},
+ {d:45,phase:'mock',title:'Mock Day',tasks:[
+   {n:'Arrays: Maximum Subarray',s:'maximum-subarray'},{n:'Sliding Window: Min Window Substring',s:'minimum-window-substring'},{n:'Tree: BT Maximum Path Sum',s:'binary-tree-maximum-path-sum'},{n:'Graph: Course Schedule',s:'course-schedule'},{n:'DP: Coin Change',s:'coin-change'}],note:'25 min each — no hints'},
+];
+
+let state = {}; // {1:[bool,...], ...}
+const STORAGE_KEY = 'dsa-45day-progress';
+const hasClaudeStorage = typeof window.storage !== 'undefined' && window.storage;
+
+async function loadState(){
+  try{
+    if(hasClaudeStorage){
+      const r = await window.storage.get(STORAGE_KEY, false);
+      if(r && r.value) state = JSON.parse(r.value);
+    } else {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) state = JSON.parse(raw);
+    }
+  }catch(e){ state = {}; }
+}
+async function saveState(){
+  try{
+    if(hasClaudeStorage){
+      await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+  }catch(e){ console.error('save failed', e); }
+}
+
+function dayChecks(day){
+  if(!state[day.d]) state[day.d] = new Array(day.tasks.length).fill(false);
+  return state[day.d];
+}
+function dayPct(day){
+  const c = dayChecks(day);
+  return Math.round((c.filter(Boolean).length / c.length) * 100);
+}
+function dayDone(day){ return dayPct(day) === 100; }
+
+/* ---------- STATS ---------- */
+function renderStats(){
+  let solved=0,total=0,daysDone=0;
+  DAYS.forEach(day=>{
+    const c = dayChecks(day);
+    total += c.length;
+    solved += c.filter(Boolean).length;
+    if(dayDone(day)) daysDone++;
+  });
+  document.getElementById('stat-solved').textContent = solved+'/'+total;
+  document.getElementById('stat-days').textContent = daysDone+'/45';
+  document.getElementById('progress-fill').style.width = Math.round((solved/total)*100)+'%';
+
+  let streak=0;
+  for(let i=0;i<DAYS.length;i++){
+    if(dayDone(DAYS[i])) streak++; else break;
+  }
+  document.getElementById('stat-streak').textContent = streak;
+}
+
+/* ---------- LEGEND ---------- */
+function renderLegend(){
+  const el = document.getElementById('legend');
+  el.innerHTML = Object.entries(PHASES).map(([k,p])=>
+    `<div class="legend-item"><div class="legend-dot" style="background:${p.color}"></div>${p.name}</div>`
+  ).join('');
+}
+
+/* ---------- MAP ---------- */
+function renderMap(){
+  const inner = document.getElementById('map-inner');
+  const cols = 5, colW = 900/cols, rowH = 120;
+  const rows = Math.ceil(DAYS.length/cols);
+  inner.style.height = (rows*rowH + 40)+'px';
+
+  const pts = DAYS.map((day,i)=>{
+    const row = Math.floor(i/cols);
+    let col = i % cols;
+    if(row % 2 === 1) col = cols-1-col;
+    const x = col*colW + colW/2;
+    const y = row*rowH + 50;
+    return {day,x,y};
+  });
+
+  let svg = `<svg class="trail" width="900" height="${rows*rowH+40}"><polyline points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="#D9D3C2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  let nodes = pts.map(({day,x,y})=>{
+    const p = PHASES[day.phase];
+    const pct = dayPct(day);
+    const done = dayDone(day);
+    const cls = ['node'];
+    if(done) cls.push('done'); else if(pct>0) cls.push('partial');
+    if(day.phase==='mock') cls.push('mock');
+    if(day.phase==='revision') cls.push('revision');
+    return `<div class="${cls.join(' ')}" style="left:${x}px;top:${y}px;--phase-color:${p.color};--pct:${pct}" data-day="${day.d}">
+      <div class="node-ring"><span class="day-n">${day.phase==='mock'?'★':day.d}</span></div>
+      <div class="node-label">${day.title}</div>
+    </div>`;
+  }).join('');
+
+  inner.innerHTML = svg + nodes;
+
+  inner.querySelectorAll('.node').forEach(n=>{
+    n.addEventListener('click', ()=> openDetail(parseInt(n.dataset.day)));
+  });
+}
+
+/* ---------- DETAIL OVERLAY ---------- */
+function taskRowHTML(day, idx, task, checked){
+  const link = task.s
+    ? `<a class="task-link" href="https://leetcode.com/problems/${task.s}/" target="_blank" rel="noopener" title="Open on LeetCode">↗</a>`
+    : '';
+  return `<div class="task-row ${checked?'checked':''}">
+    <input type="checkbox" id="t-${day.d}-${idx}" ${checked?'checked':''} data-day="${day.d}" data-idx="${idx}">
+    <label for="t-${day.d}-${idx}">${task.n}</label>
+    ${link}
+  </div>`;
+}
+
+function openDetail(dayNum){
+  const day = DAYS.find(d=>d.d===dayNum);
+  const p = PHASES[day.phase];
+  const checks = dayChecks(day);
+  const el = document.getElementById('detail');
+  el.style.setProperty('--phase-color', p.color);
+  el.innerHTML = `
+    <div class="detail-head">
+      <div><div class="detail-day">Day ${day.d} &middot; ${p.name}</div><div class="detail-title">${day.title}</div></div>
+      <button class="detail-close" id="detail-close">&times;</button>
+    </div>
+    ${day.tasks.map((t,i)=>taskRowHTML(day,i,t,checks[i])).join('')}
+    ${day.note?`<div class="detail-note">${day.note}</div>`:''}
+  `;
+  document.getElementById('detail-close').addEventListener('click', closeDetail);
+  el.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', async ()=>{
+      const d = parseInt(cb.dataset.day), i = parseInt(cb.dataset.idx);
+      state[d][i] = cb.checked;
+      cb.closest('.task-row').classList.toggle('checked', cb.checked);
+      await saveState();
+      renderStats(); renderMap(); renderList();
+    });
+  });
+  document.getElementById('overlay').classList.add('show');
+}
+function closeDetail(){ document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeDetail(); });
+
+/* ---------- LIST VIEW ---------- */
+function renderList(){
+  const el = document.getElementById('list-view');
+  let html = '';
+  let currentPhase = null, buffer = [], count = 0;
+
+  function flush(){
+    if(!buffer.length) return;
+    const p = PHASES[currentPhase];
+    html += `<div class="phase-block">
+      <div class="phase-head"><div class="swatch" style="background:${p.color}"></div>${p.name}<span class="count">${count} problems</span></div>
+      <div class="day-grid">${buffer.join('')}</div>
+    </div>`;
+    buffer = []; count = 0;
+  }
+
+  DAYS.forEach(day=>{
+    if(day.phase !== currentPhase){ flush(); currentPhase = day.phase; }
+    const p = PHASES[day.phase];
+    const checks = dayChecks(day);
+    count += day.tasks.length;
+    buffer.push(`<div class="day-card" style="--phase-color:${p.color}">
+      <div class="dc-head"><div><div class="dc-day">Day ${day.d}</div><div class="dc-title">${day.title}</div></div></div>
+      ${day.tasks.map((t,i)=>taskRowHTML(day,i,t,checks[i])).join('')}
+      ${day.note?`<div class="detail-note">${day.note}</div>`:''}
+    </div>`);
+  });
+  flush();
+  el.innerHTML = html;
+
+  el.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', async ()=>{
+      const d = parseInt(cb.dataset.day), i = parseInt(cb.dataset.idx);
+      state[d][i] = cb.checked;
+      cb.closest('.task-row').classList.toggle('checked', cb.checked);
+      await saveState();
+      renderStats(); renderMap();
+    });
+  });
+}
+
+/* ---------- VIEW TOGGLE ---------- */
+document.getElementById('btn-map').addEventListener('click', ()=>{
+  document.getElementById('btn-map').classList.add('active');
+  document.getElementById('btn-list').classList.remove('active');
+  document.getElementById('map-view').style.display = 'block';
+  document.getElementById('list-view').style.display = 'none';
+});
+document.getElementById('btn-list').addEventListener('click', ()=>{
+  document.getElementById('btn-list').classList.add('active');
+  document.getElementById('btn-map').classList.remove('active');
+  document.getElementById('list-view').style.display = 'block';
+  document.getElementById('map-view').style.display = 'none';
+});
+
+/* ---------- INIT ---------- */
+(async function init(){
+  await loadState();
+  renderLegend();
+  renderStats();
+  renderMap();
+  renderList();
+})();
+</script>
+</body>
+</html>
